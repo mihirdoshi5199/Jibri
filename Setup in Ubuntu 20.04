@@ -1,0 +1,135 @@
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt-get install linux-image-extra-virtual
+
+1. ALSA and Loopback Device
+
+echo "snd-aloop" >> /etc/modules
+
+modprobe snd_aloop
+Note(after runnig above command if you get an erroor like this ‘modprobe: FATAL: Module 
+snd_aloop not found in directory /lib/modules/5.11.0-1022-aws’ follow the steps )
+
+Edit default grub file:
+
+vim /etc/default/grub and set
+
+GRUB_DEFAULT=“1>2”
+
+Run update-grub
+
+And then reboot now to take this in effect
+After reboot you can test it with uname -a which should give 4.4.0-116-generic
+
+
+After this modprobe snd-aloop should work fine. 
+
+lsmod | grep snd_aloop
+
+If the output shows the snd-aloop module loaded, then the ALSA loopback configuration step is
+complete.
+
+2. Ffmpeg with X11 capture support
+
+sudo apt-get install ffmpeg
+
+3. Google Chrome stable & Chromedriver
+
+curl -sS -o - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add
+echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+apt-get -y update
+apt-get -y install google-chrome-stable
+
+wget -N http://chromedriver.storage.googleapis.com/99.0.4844.51/chromedriver_linux64.zip -P ~/
+unzip ~/chromedriver_linux64.zip -d ~/
+rm ~/chromedriver_linux64.zip
+sudo mv -f ~/chromedriver /usr/local/bin/chromedriver
+sudo chmod 0755 /usr/local/bin/chromedriver
+
+mkdir -p /etc/opt/chrome/policies/managed
+
+echo ‘{ “CommandLineFlagSecurityWarningsEnabled”:false }’>>/etc/opt/chrome/policies/managed/managed_policies.json
+
+4. Miscellaneous required tools  
+sudo apt-get install -y xserver-xorg-input-void
+sudo apt-get install default-jre-headless ffmpeg curl alsa-utils icewm xdotool xserver-xorg-video-dummy
+
+5. Installing Jibri
+
+wget -qO - https://download.jitsi.org/jitsi-key.gpg.key | sudo apt-key add -
+
+sudo sh -c "echo 'deb https://download.jitsi.org unstable/' > /etc/apt/sources.list.d/jitsi-unstable.list"
+
+sudo apt-get update
+
+sudo apt-get install jibri
+
+sudo usermod -aG adm,audio,video,plugdev jibri
+
+6. Install Java8
+
+wget -O - https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public | sudo apt-key add -
+add-apt-repository https://adoptopenjdk.jfrog.io/adoptopenjdk/deb/
+
+apt install adoptopenjdk-8-hotspot -y
+update-alternatives --config java
+
+vim ~/.bash_profile
+add this line in above file ‘update-alternatives --config java’ and save
+   
+export JAVA_HOME=/usr/lib/jvm/adoptopenjdk-8-hotspot-amd64/bin/java
+source ~/.bash_profile
+echo $JAVA_HOME
+
+7. Configure Jibri
+create directory to store recordings
+      mkdir /recordings
+      chown jibri:jitsi /recordings
+create config.json file 
+      vim /etc/jitsi/jibri/config.json
+
+add tha following in config,json
+{
+ "recording_directory":"/recordings",
+ "finalize_recording_script_path": "",
+ "xmpp_environments": [
+ {
+ "name": "prod environment",
+ "xmpp_server_hosts": [
+ "yourdomain.com"
+ ],
+ "xmpp_domain": "yourdomain.com",
+ "control_login": {
+ 
+ "domain": "auth.yourdomain.com",
+ 
+ "username": "jibri",
+ "password": ""
+ },
+ "control_muc": {
+ "domain": "internal.auth.yourdomain.com",
+ "room_name": "JibriBrewery",
+ "nickname": "jibri-nickname"
+},
+ "call_login": {
+ "domain": "recorder.yourdomain.com",
+ "username": "recorder",
+ "password": ""
+ },
+ "room_jid_domain_string_to_strip_from_start": "conference.",
+ "usage_timeout": "0"
+ }
+ ]
+}
+
+Save and exit
+
+
+8. FINAL STEP (start services)
+systemctl enable --now jibri
+systemctl restart jibri
+
+
+
+
+
